@@ -61,10 +61,10 @@ int main() {
     pthread_join(prod_tid, NULL);   // wait for producer thread to exit
     cerr << "p:(main) producer thread exited";
 
-    sem_close(empty); cerr << "p:(main) semiphore close empty";
-    sem_close(full);	cerr << "p:(main) semiphore close full";
-    sem_unlink("empty");	cerr << "p:(main) semiphore unlink empty";
-    sem_unlink("full");		cerr << "p:(main) semiphore unlink full";
+    sem_close(empty); cerr << "p:(main) close empty semaphore";
+    sem_close(full);	cerr << "p:(main) close full semaphore";
+    sem_unlink("empty");	cerr << "p:(main) unlink empty semaphore";
+    sem_unlink("full");		cerr << "p:(main) unlink full semaphore";
 
     pthread_mutex_destroy(&mutex);	cerr << "p:(main) mutex destroy";
     
