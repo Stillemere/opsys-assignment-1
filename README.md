@@ -1,2 +1,6 @@
 # opsys-assignment-1
-The first programming assignment of Operating Systems. Regrettably, it is not in a finished state at the time of writing. The producer and consumer here are not synchronized properly.
+The first programming assignment of Operating Systems.
+
+I have reworked the code into something I believe may be more sensible.
+However, it is still not working and is experiencing deadlock where the producer
+is waiting indefinitely.

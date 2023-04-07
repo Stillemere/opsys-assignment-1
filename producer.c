@@ -3,72 +3,69 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <fcntl.h>
+
 #include <sys/stat.h>
+#include <sys/mman.h>
+
 
 #include <iostream>
-using std::cerr;
 
 #define TABLE_SIZE 2
-
-int table[TABLE_SIZE];
 int i = 0;
+sem_t mutex;
 
-sem_t *empty;
-sem_t *full;
-//sem_t sem;
+typedef struct {
+    int items[TABLE_SIZE];
+} Table;
+Table *table;
 
-pthread_mutex_t mutex;
 
 void *producer(void *arg) {
-    cerr << "p: Producer invoked!\n";
+    std::cout << "producer.c: Producer invoked!" << std::endl;
     int item = 0;
     while (1) {
         item = rand() % 100; // generate item
-	cerr << "p: item generated. waiting for empty slot.\n";
-        sem_wait(empty); // wait for empty slot
-		cerr << "p: empty slot available.\n";
-        pthread_mutex_lock(&mutex); // enter critical section
-		cerr << "p: entering critical section.\n";
-        table[i] = item; // put item on table
-		cerr << "p: item placed on table.\n";
-        printf("p: Producer: Produced item %d\n", item);
-        i++;
-        pthread_mutex_unlock(&mutex); // exit critical section
-		cerr << "p: exiting critical section.\n";
-        sem_post(full); // signal that table is full
-		cerr << "p: table is full.\n";
-        if (i == TABLE_SIZE) {
-            printf("p: Table is full. Producer is waiting.\n");
+	std::cout << "p: item generated. waiting for empty slot." << std::endl;
+        sem_wait(&mutex); // wait for empty slot
+		std::cout << "p: empty slot available." << std::endl;
+        //pthread_mutex_lock(&mutex); // enter critical section
+		std::cout << "p: entering critical section." << std::endl;
+        // Critical Section
+	{
+            table->items[i] = item; // put item on table
+            std::cout << "p: Producer: Produced item" << item << std::endl;
+            i++;
+           // pthread_mutex_unlock(&mutex); // exit critical section
+		std::cout << "p: exiting critical section." << std::endl;
+            sem_post(&mutex);
+            if (i == TABLE_SIZE) {
+                std::cout << "p: Table is full. Producer is waiting." << std::endl;
+            }
         }
     }
     pthread_exit(NULL);
 }
 
-int main() {
-    cerr << "\np:(main) producer.c now running\n";
+int main(){
+    std::cout << "producer.c: running main" << std::endl;
 
-    empty = sem_open("empty", O_CREAT, 0644, TABLE_SIZE);
-    full = sem_open("full", O_CREAT, 0644, 0);
-    //sem_init(&sem, 0, TABLE_SIZE);
+    pthread_t producer_thread;
+    int fd = shm_open("shmname", O_CREAT | O_RDWR, 0666); // creating shared memory obj
+//  ftruncate(fd, sizeof(int)*2);
+    table = (Table *)mmap(NULL, (sizeof(int)*2), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    //if(shmp == MAP_FAILED) std::cout << "mmap failed." << std::endl;
 
-    pthread_mutex_init(&mutex, NULL);
+    sem_init(&mutex, 1, 1); // pthread_mutex_init(&mutex, NULL);
+    pthread_create(&producer_thread, NULL, producer, NULL);
+    pthread_join(producer_thread, NULL); // wait for producer thread to exit
+    // jumps to producer thread
+    std::cout << "p:(main) producer thread exited" << std::endl;
 
-    pthread_t prod_tid;
+    sem_close(&mutex);
+    sem_unlink("mutex");
+    //pthread_mutex_destroy(&mutex);
 
-    pthread_create(&prod_tid, NULL, producer, NULL); cerr << "p:(main) producer thread created.\n";
-
-
-    pthread_join(prod_tid, NULL);   // wait for producer thread to exit
-    cerr << "p:(main) producer thread exited";
-
-    sem_close(empty); cerr << "p:(main) close empty semaphore";
-    sem_close(full);	cerr << "p:(main) close full semaphore";
-    sem_unlink("empty");	cerr << "p:(main) unlink empty semaphore";
-    sem_unlink("full");		cerr << "p:(main) unlink full semaphore";
-
-    pthread_mutex_destroy(&mutex);	cerr << "p:(main) mutex destroy";
-    
-    printf("p:(main) completed main.\n");
+    std::cout << "p:(main) completed main." << std::endl;
 
     return 0;
 }
