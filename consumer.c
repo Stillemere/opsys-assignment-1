@@ -28,14 +28,11 @@ void *consumer(void *arg) {
 	cout << "c: entering critical section" << endl;
         // Critical section
 	{
-        //pthread_mutex_lock(&mutex); // enter critical section
-
 
 	cout << "c: getting item from table" << endl;
-        item = table->items[i-1]; // get item from table
+        item = table->items[i]; // get item from table, removed minus 1
         cout << "Consumer: Consumed item" << item << endl;
         i--;
-        //pthread_mutex_unlock(&mutex); // exit critical section
         cout << "c: exited critical section." << endl;
 
 
@@ -51,44 +48,36 @@ void *consumer(void *arg) {
 int main() {
     cerr << "c:(main) entered main." << endl;
 
-    //empty = sem_open("empty", O_CREAT, 0644, TABLE_SIZE);
-    //full = sem_open("full", O_CREAT, 0644, 0);
+
     pthread_t consumer_thread;
 
-
+    sem_open("mutex", O_RDWR, 0666, TABLE_SIZE);
+    std::cout << "c: opened mutex" << std::endl;
     // create shared memory object
-    // CHANGE: producer.c should do this
     int fd = shm_open(NULL, O_RDWR, 0); // Reading existing shared memory obj
-    //if(fd == -1) errExit("shm_open");
-    sem_init(&mutex, 1, 1); // initialize semaphore
+    std::cout << "c: opened shared memory" << std::endl;
+    
+    // initialize semaphore
+    sem_init(&mutex, 1, 1);
+    std::cout << "c: initialized semaphore" << std::endl;
 
-    // create map structure
+    // map the table
     table = (Table *)mmap(NULL, (sizeof(int)*2), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    //	if(map == MAP_FAILED) errExit("mmap");
+    std::cout << "c:mapped table" << std::endl;
+
+    // create thread
     pthread_create(&consumer_thread, NULL, consumer, NULL);
     pthread_join(consumer_thread, NULL); // enters consumer thread
 
     std::cout << "c: (main) consumer thread exited)" << std::endl;
 
-    // copy data into shared memory object
     //memcpy(&table->items, table, TABLE_SIZE);
-    // tell 
-
-    /*
-    pthread_mutex_init(&mutex, NULL);
-
-    pthread_t cons_tid;
-    pthread_create(&cons_tid, NULL, consumer, NULL);
-
-    pthread_join(cons_tid, NULL);
-    */
 
     sem_close(&mutex); // close semaphore
     sem_unlink("mutex"); // seems right?
 
     //shm_unlink(&fd); // remove shared memory object
 
-    //pthread_mutex_destroy(&mutex);
     cerr << "c:(main) end of main.\n";
     return 0;
 }
